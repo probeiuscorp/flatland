@@ -1,14 +1,23 @@
 import './style.css'
+import { createStore, atom, Atom } from 'jotai/vanilla'
 
 const canvas = document.createElement('canvas');
 canvas.className = 'layer layer/base';
 document.body.prepend(canvas);
 
+const store = createStore();
 function resizeCanvas() {
-  const { width, height } = canvas.getBoundingClientRect();
-  canvas.width = Math.floor(width * devicePixelRatio);
-  canvas.height = Math.floor(height * devicePixelRatio);
-  paint(canvas.getContext('2d')!);
+  const bb = canvas.getBoundingClientRect();
+  const width = canvas.width = Math.floor(bb.width * devicePixelRatio);
+  const height = canvas.height = Math.floor(bb.height * devicePixelRatio);
+  const ctx = canvas.getContext('2d')!;
+  const paintAtom = paint(ctx);
+  function applyPaint() {
+    ctx.clearRect(0, 0, width, height);
+    store.get(paintAtom)();
+  }
+  applyPaint();
+  return store.sub(paintAtom, applyPaint);
 }
 
 const world: Shape[] = [
@@ -19,23 +28,33 @@ const world: Shape[] = [
     { x: -3, y: +1 },
   ]),
 ];
+const facingAtom = atom(0);
+document.addEventListener('keydown', (e) => {
+  if(e.key === 'ArrowLeft') store.set(facingAtom, (facing) => facing - Math.PI / 32);
+  if(e.key === 'ArrowRight') store.set(facingAtom, (facing) => facing + Math.PI / 32);
+});
 const fov = 3 / 2 * Math.PI;
-function paint(ctx: CanvasRenderingContext2D) {
+function paint(ctx: CanvasRenderingContext2D): Atom<() => void> {
   const { width, height } = ctx.canvas;
-  const angleStart = -1 / 2 * fov;
-  const angleStep = fov / width;
-  for(let i=0;i<width;i++) {
-    ctx.beginPath();
-    ctx.moveTo(i, 0);
-    ctx.lineTo(i, height);
-    const angle = angleStart + angleStep * i;
-    const distance = rayCast(world, angle);
-    const color = distance === undefined ? 'red' : (
-      ((c) => `rgb(${c},${c},${c})`)(Math.exp(-distance / Math.SQRT2) * 256)
-    );
-    ctx.strokeStyle = color;
-    ctx.stroke();
-  }
+  return atom((get) => {
+    const facing = get(facingAtom);
+    const angleStart = facing + -1 / 2 * fov;
+    const angleStep = fov / width;
+    return () => {
+      for(let i=0;i<width;i++) {
+        ctx.beginPath();
+        ctx.moveTo(i, 0);
+        ctx.lineTo(i, height);
+        const angle = angleStart + angleStep * i;
+        const distance = rayCast(world, angle);
+        const color = distance === undefined ? 'red' : (
+          ((c) => `rgb(${c},${c},${c})`)(Math.exp(-distance / Math.SQRT2) * 256)
+        );
+        ctx.strokeStyle = color;
+        ctx.stroke();
+      }
+    };
+  });
 }
 
 type Point = {
@@ -109,5 +128,8 @@ function rayCast(shapes: Shape[], angle: number) {
   return undefined;
 }
 
-resizeCanvas();
-document.addEventListener('resize', resizeCanvas);
+let cleanup = resizeCanvas();
+document.addEventListener('resize', () => {
+  cleanup();
+  cleanup = resizeCanvas();
+});
