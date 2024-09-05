@@ -1,5 +1,6 @@
 import './style.css'
 import { createStore, atom, Atom } from 'jotai/vanilla'
+import { intersectLineSegment, LineSegment, magnitude, V2 } from './vectors';
 
 const canvas = document.createElement('canvas');
 canvas.className = 'layer layer/base';
@@ -29,7 +30,7 @@ const world: Shape[] = [
   ]),
 ];
 const facingAtom = atom(0);
-const positionAtom = atom<Point>({ x: 0, y: 0 });
+const positionAtom = atom<V2>({ x: 0, y: 0 });
 document.addEventListener('keydown', (e) => {
   if(e.key === 'ArrowLeft') store.set(facingAtom, (facing) => facing - Math.PI / 32);
   if(e.key === 'ArrowRight') store.set(facingAtom, (facing) => facing + Math.PI / 32);
@@ -67,46 +68,10 @@ function paint(ctx: CanvasRenderingContext2D): Atom<() => void> {
   });
 }
 
-type Point = {
-  x: number,
-  y: number,
-}
-type LineSegment = {
-  start: Point,
-  end: Point,
-}
-function aspectsOf({ start, end }: LineSegment) {
-  const slope = (end.y - start.y) / (end.x - start.x);
-  const b = start.y - slope * start.x;
-  return { slope, b };
-}
-function formulaOf(segment: LineSegment) {
-  const { slope, b } = aspectsOf(segment);
-  return (x: number) => x * slope + b; 
-}
-function findXIntersection(side: LineSegment, angle: number): number | undefined {
-  const { start, end } = side;
-  const { slope, b } = aspectsOf(side);
-  const x = b / (Math.tan(angle) - slope);
-  // Not in range of line segmenet
-  if((start.x < end.x && (x < start.x || x > end.x)) || (start.x > end.x && (x > start.x || x < end.x))) {
-    return undefined;
-  }
-  return x;
-}
-function next<T, V>(x: T | undefined, fn: (x: T) => V | undefined): V | undefined {
-  if(x === undefined) return undefined;
-  return fn(x);
-}
-
-function distance(a: Point, b: Point) {
-  return Math.hypot(a.x - b.x, a.y - b.y);
-}
-
 type Shape =
   | { type: 'polygon', sides: LineSegment[] }
 
-function polygon(points: Point[]): Shape & { type: 'polygon' } {
+function polygon(points: V2[]): Shape & { type: 'polygon' } {
   const len = points.length;
   if(len < 2) throw new Error('Polygon must have at least 2 points');
   let last = points[len - 1];
@@ -126,11 +91,9 @@ function rayCast(shapes: Shape[], angle: number) {
   for(const shape of shapes) {
     if(shape.type === 'polygon') {
       for(const side of shape.sides) {
-        const x = findXIntersection(side, angle);
-        if(x === undefined) continue;
-        const y = formulaOf(side)(x);
-        if(isNaN(y)) continue;
-        closest = Math.min(closest, Math.hypot(x, y));
+        const p = intersectLineSegment(side, angle);
+        if(p === undefined) continue;
+        closest = Math.min(closest, magnitude(p));
       }
     }
   }
