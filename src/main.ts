@@ -29,15 +29,19 @@ const world: Shape[] = [
   ]),
 ];
 const facingAtom = atom(0);
+const positionAtom = atom<Point>({ x: 0, y: 0 });
 document.addEventListener('keydown', (e) => {
   if(e.key === 'ArrowLeft') store.set(facingAtom, (facing) => facing - Math.PI / 32);
   if(e.key === 'ArrowRight') store.set(facingAtom, (facing) => facing + Math.PI / 32);
+  if(e.key === 'ArrowUp') store.set(positionAtom, ({ x, y }) => ({ x: x + 0.05, y }));
+  if(e.key === 'ArrowDown') store.set(positionAtom, ({ x, y }) => ({ x: x - 0.05, y }));
 });
-const fov = 3 / 2 * Math.PI;
+const fov = 2 * Math.PI;
 function paint(ctx: CanvasRenderingContext2D): Atom<() => void> {
   const { width, height } = ctx.canvas;
   return atom((get) => {
     const facing = get(facingAtom);
+    const position = get(positionAtom);
     const angleStart = facing + -1 / 2 * fov;
     const angleStep = fov / width;
     return () => {
@@ -46,7 +50,13 @@ function paint(ctx: CanvasRenderingContext2D): Atom<() => void> {
         ctx.moveTo(i, 0);
         ctx.lineTo(i, height);
         const angle = angleStart + angleStep * i;
-        const distance = rayCast(world, angle);
+        const distance = rayCast(world.map(({ type, sides }) => ({
+          type,
+          sides: sides.map((side): LineSegment => ({
+            start: { x: side.start.x + position.x, y: side.start.y + position.y },
+            end: { x: side.end.x + position.x, y: side.end.y + position.y },
+          })),
+        })), angle);
         const color = distance === undefined ? 'red' : (
           ((c) => `rgb(${c},${c},${c})`)(Math.exp(-distance / Math.SQRT2) * 256)
         );
