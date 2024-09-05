@@ -1,6 +1,7 @@
 import './style.css'
 import { createStore, atom, Atom } from 'jotai/vanilla'
-import { intersectLineSegment, LineSegment, magnitude, V2 } from './vectors';
+import { LineSegment, magnitude, V2 } from './vectors';
+import * as V from './vectors';
 
 const canvas = document.createElement('canvas');
 canvas.className = 'layer layer/base';
@@ -31,11 +32,12 @@ const world: Shape[] = [
 ];
 const facingAtom = atom(0);
 const positionAtom = atom<V2>({ x: 0, y: 0 });
+const moveWhereFacing = (scale: number) => (pos: V2) => V.append(pos, V.scale(V.facing(store.get(facingAtom)), scale));
 document.addEventListener('keydown', (e) => {
   if(e.key === 'ArrowLeft') store.set(facingAtom, (facing) => facing - Math.PI / 32);
   if(e.key === 'ArrowRight') store.set(facingAtom, (facing) => facing + Math.PI / 32);
-  if(e.key === 'ArrowUp') store.set(positionAtom, ({ x, y }) => ({ x: x + 0.05, y }));
-  if(e.key === 'ArrowDown') store.set(positionAtom, ({ x, y }) => ({ x: x - 0.05, y }));
+  if(e.key === 'ArrowUp') store.set(positionAtom, moveWhereFacing(0.05));
+  if(e.key === 'ArrowDown') store.set(positionAtom, moveWhereFacing(-0.05));
 });
 const fov = 2 * Math.PI;
 function paint(ctx: CanvasRenderingContext2D): Atom<() => void> {
@@ -91,7 +93,7 @@ function rayCast(shapes: Shape[], angle: number) {
   for(const shape of shapes) {
     if(shape.type === 'polygon') {
       for(const side of shape.sides) {
-        const p = intersectLineSegment(side, angle);
+        const p = V.intersectLineSegment(side, angle);
         if(p === undefined) continue;
         closest = Math.min(closest, magnitude(p));
       }
