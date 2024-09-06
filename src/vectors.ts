@@ -70,6 +70,8 @@ export function intersectLineSegment({ start, end }: LineSegment, angle: number)
   };
   return next(invert(slopes), inverted => {
     const { y: t } = mulMV(inverted, starts);
+    if(t < 0) return undefined; // Intersection is behind the origin ray
+
     const intersection = {
       x: -slopes.b * t,
       y: -slopes.d * t,
