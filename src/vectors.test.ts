@@ -27,6 +27,13 @@ describe('intersectLineSegment', () => {
     });
   });
 
+  test('Should not extend backwards', () => {
+    testIntersection({
+      start: { x: 0, y: 2 },
+      end: { x: 2, y: 0 },
+    }, Math.PI + (Math.PI / 4), undefined);
+  });
+
   test('Vertical line', () => {
     testIntersection({
       start: { x: -2, y: 2 },
