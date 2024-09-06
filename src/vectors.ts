@@ -70,9 +70,20 @@ export function intersectLineSegment({ start, end }: LineSegment, angle: number)
   };
   return next(invert(slopes), inverted => {
     const { y: t } = mulMV(inverted, starts);
-    return {
+    const intersection = {
       x: -slopes.b * t,
       y: -slopes.d * t,
     }
+
+    if(isBetween(start.x, intersection.x, end.x) && isBetween(start.y, intersection.y, end.y))
+      return intersection;
   });
+}
+
+function isBetween(min: number, a: number, max: number) {
+  if(min <= max) {
+    return a >= min && a <= max;
+  } else {
+    return a <= min && a >= max;
+  }
 }
