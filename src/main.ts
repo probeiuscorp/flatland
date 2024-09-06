@@ -23,7 +23,7 @@ function resizeCanvas() {
 }
 
 const world: Shape[] = [
-  polygon([
+  ...polygon([
     { x: -1, y: -1 },
     { x: +1, y: -1 },
     { x: +1, y: +3 },
@@ -53,12 +53,10 @@ function paint(ctx: CanvasRenderingContext2D): Atom<() => void> {
         ctx.moveTo(i, 0);
         ctx.lineTo(i, height);
         const angle = angleStart + angleStep * i;
-        const distance = rayCast(world.map(({ type, sides }) => ({
+        const distance = rayCast(world.map(({ type, start, end }) => ({
           type,
-          sides: sides.map((side): LineSegment => ({
-            start: { x: side.start.x + position.x, y: side.start.y + position.y },
-            end: { x: side.end.x + position.x, y: side.end.y + position.y },
-          })),
+          start: { x: start.x + position.x, y: start.y + position.y },
+          end: { x: end.x + position.x, y: end.y + position.y },
         })), angle);
         const color = distance === undefined ? 'red' : (
           ((c) => `rgb(${c},${c},${c})`)(Math.exp(-distance / Math.SQRT2) * 256)
@@ -71,32 +69,31 @@ function paint(ctx: CanvasRenderingContext2D): Atom<() => void> {
 }
 
 type Shape =
-  | { type: 'polygon', sides: LineSegment[] }
+  | ({ type: 'line-segment' } & LineSegment)
 
-function polygon(points: V2[]): Shape & { type: 'polygon' } {
+function polygon(points: V2[]) {
   const len = points.length;
   if(len < 2) throw new Error('Polygon must have at least 2 points');
   let last = points[len - 1];
-  const sides: LineSegment[] = [];
+  const sides: (Shape & { type: 'line-segment' })[] = [];
   for(const point of points) {
     sides.push({
+      type: 'line-segment',
       start: last,
       end: point,
     });
     last = point;
   }
-  return { type: 'polygon', sides };
+  return sides;
 }
 
 function rayCast(shapes: Shape[], angle: number) {
   let closest = Infinity;
   for(const shape of shapes) {
-    if(shape.type === 'polygon') {
-      for(const side of shape.sides) {
-        const p = V.intersectLineSegment(side, angle);
-        if(p === undefined) continue;
-        closest = Math.min(closest, magnitude(p));
-      }
+    if(shape.type === 'line-segment') {
+      const p = V.intersectLineSegment(shape, angle);
+      if(p === undefined) continue;
+      closest = Math.min(closest, magnitude(p));
     }
   }
   if(isFinite(closest)) return closest;
