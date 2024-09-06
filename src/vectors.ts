@@ -34,6 +34,14 @@ export function mulMV({ a, b, c, d }: M2x2, { x, y }: V2): V2 {
     y: c * x + d * y,
   };
 }
+export function mulMM(a: M2x2, b: M2x2): M2x2 {
+  return {
+    a: a.a * b.a + a.b * b.c,
+    b: a.a * b.b + a.b * b.d,
+    c: a.c * b.a + a.d * b.c,
+    d: a.c * b.b + a.d * b.d,
+  };
+}
 
 export function invert(m: M2x2): M2x2 | undefined {
   const { a, b, c, d } = m;
