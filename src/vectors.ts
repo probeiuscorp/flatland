@@ -49,8 +49,8 @@ export function invert(m: M2x2): M2x2 | undefined {
   if(det === 0) return undefined;
   return {
     a: d / det,
-    b: -b,
-    c: -c,
+    b: -b / det,
+    c: -c / det,
     d: a / det,
   };
 }
