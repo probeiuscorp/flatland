@@ -49,4 +49,11 @@ describe('intersectLineSegment', () => {
       end: { x: 2, y: 0 },
     }, 5 * Math.PI / 8, undefined);
   });
+
+  test('Bounds checking robust to floating point oddities', () => {
+    expect(intersectLineSegment({
+      start: { x: 2, y: 2 },
+      end: { x: 2, y: -2 },
+    }, -0.7397220334589923)).toBeDefined();
+  });
 });
