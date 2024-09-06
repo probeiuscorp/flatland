@@ -55,8 +55,8 @@ function paint(ctx: CanvasRenderingContext2D): Atom<() => void> {
         const angle = angleStart + angleStep * i;
         const distance = rayCast(world.map(({ type, start, end }) => ({
           type,
-          start: { x: start.x + position.x, y: start.y + position.y },
-          end: { x: end.x + position.x, y: end.y + position.y },
+          start: { x: start.x - position.x, y: start.y - position.y },
+          end: { x: end.x - position.x, y: end.y - position.y },
         })), angle);
         const color = distance === undefined ? 'red' : (
           ((c) => `rgb(${c},${c},${c})`)(Math.exp(-distance / Math.SQRT2) * 256)
